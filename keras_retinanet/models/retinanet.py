@@ -20,6 +20,7 @@ from .. import layers
 from ..utils.anchors import AnchorParameters
 from . import assert_training_model
 
+import tensorflow as tf
 
 def default_classification_model(
     num_classes,
@@ -106,20 +107,29 @@ def default_regression_model(num_values, num_anchors, pyramid_feature_size=256, 
     if keras.backend.image_data_format() == 'channels_first':
         inputs  = keras.layers.Input(shape=(pyramid_feature_size, None, None))
     else:
+        # Zhiang Chen: This is default
         inputs  = keras.layers.Input(shape=(None, None, pyramid_feature_size))
+
     outputs = inputs
     for i in range(4):
         outputs = keras.layers.Conv2D(
-            filters=regression_feature_size,
+            filters=regression_feature_size, # the dimension of the output (channel number)
             activation='relu',
             name='pyramid_regression_{}'.format(i),
             **options
         )(outputs)
 
     outputs = keras.layers.Conv2D(num_anchors * num_values, name='pyramid_regression', **options)(outputs)
+    """Zhiang Chen:
+    Anchors are generated among all grids
+    """
     if keras.backend.image_data_format() == 'channels_first':
         outputs = keras.layers.Permute((2, 3, 1), name='pyramid_regression_permute')(outputs)
     outputs = keras.layers.Reshape((-1, num_values), name='pyramid_regression_reshape')(outputs)
+    """Zhiang Chen:
+    num_values = 4, which are deltas (d_x1, d_y1, d_x2, d_y2) as a factor of the width/height
+    the anchor's position on the original image represents the position of box
+    """
 
     return keras.models.Model(inputs=inputs, outputs=outputs, name=name)
 
@@ -158,6 +168,12 @@ def __create_pyramid_features(C3, C4, C5, feature_size=256):
     # "P7 is computed by applying ReLU followed by a 3x3 stride-2 conv on P6"
     P7 = keras.layers.Activation('relu', name='C6_relu')(P6)
     P7 = keras.layers.Conv2D(feature_size, kernel_size=3, strides=2, padding='same', name='P7')(P7)
+
+    """ Zhiang Chen
+    The size of feature maps: 
+    P3 > P4 > P5 > P6 > P7
+    C3 > C4 > C5
+    """
 
     return [P3, P4, P5, P6, P7]
 
@@ -256,7 +272,7 @@ def retinanet(
         submodels               : Submodels to run on each feature map (default is regression and classification submodels).
         name                    : Name of the model.
 
-    Returns
+    Returnsnum_anchors             : Number of base anchors.
         A keras.models.Model which takes an image as input and outputs generated anchors and the result from each submodel on every pyramid level.
 
         The order of the outputs is as defined in submodels:
@@ -273,7 +289,9 @@ def retinanet(
     if submodels is None:
         submodels = default_submodels(num_classes, num_anchors)
 
+
     C3, C4, C5 = backbone_layers
+
 
     # compute pyramid features as per https://arxiv.org/abs/1708.02002
     features = create_pyramid_features(C3, C4, C5)

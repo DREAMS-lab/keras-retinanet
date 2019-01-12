@@ -204,6 +204,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         min_lr     = 0
     ))
 
+
     return callbacks
 
 
