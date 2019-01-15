@@ -1,0 +1,17 @@
+transfer learning:
+```
+keras_retinanet/bin/train.py --weights ./coco/resnet50_coco.h5 csv ./csv/annotations.csv ./csv/classes.csv
+```
+
+steps & epochs:
+```
+keras_retinanet/bin/train.py --weights ./coco/resnet50_coco.h5 --steps 50 --epochs 10 csv ./csv/annotations.csv ./csv/classes.csv
+```
+
+inference conversion:
+```
+keras_retinanet/bin/convert_model.py ./snapshots/resnet50_csv.h5 ./snapshots/retinanet.h5
+```
+
+test:
+https://github.com/DREAMS-lab/keras-retinanet/blob/master/examples/ResNet50RetinaNet.ipynb

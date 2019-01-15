@@ -1,3 +1,5 @@
+logs/
+coco/
 __pycache__/
 *.pyc
 *.c
